@@ -11,11 +11,42 @@ namespace Holsee.RxLab
     {
         private static void Main(string[] args)
         {
-            //TryCatch(TextInputDistinctWithDo);
+            TryCatch(UIThreadUpdatingWindowsForms);
         }
 
-        #region Rx
+        #region Rx Concurrency & Syncronization
 
+        /// <summary>
+        /// This demonstration shows how to avoid trying ot update the UI thread,
+        /// from the Background thread in which OnNext will be called on.
+        /// </summary>
+        public static void UIThreadUpdatingWindowsForms()
+        {
+            var txt = new TextBox();
+            var lbl = new Label
+                          {
+                              Location = new Point(100, 100)
+                          };
+            var frm = new Form
+                          {
+                              Controls = {txt, lbl}
+                          };
+
+            IObservable<string> input = Observable.FromEvent<EventArgs>(txt, "TextChanged")
+                .Select(evt => ((TextBox) evt.Sender).Text)
+                .DistinctUntilChanged();
+        
+
+            //NOTE: In WPF you would use the .ObserveOnDispatcher() instead
+            using(input.ObserveOn(lbl).Subscribe(inp => lbl.Text = inp))
+            {
+                Application.Run(frm);
+            }
+        }
+
+        #endregion
+
+        #region Rx
 
         /// <summary>
         /// A demonstration of the majority of the Observable static Factory Methods.
@@ -38,7 +69,7 @@ namespace Holsee.RxLab
             IObservable<int> source = Observable.GenerateWithTime(
                 0, //Initial State
                 i => i < 5, //Condition
-                i => i * i, //Selector
+                i => i*i, //Selector
                 i => TimeSpan.FromSeconds(1), //Interval
                 i => i + 1 //Iterator
                 );
@@ -201,12 +232,12 @@ namespace Holsee.RxLab
         {
             var txt = new TextBox();
             var frm = new Form
-            {
-                Controls = { txt }
-            };
+                          {
+                              Controls = {txt}
+                          };
 
             IObservable<string> input = Observable.FromEvent<EventArgs>(txt, "TextChanged")
-                .Select(evt => ((TextBox)evt.Sender).Text);
+                .Select(evt => ((TextBox) evt.Sender).Text);
 
             using (input.Subscribe(inp => Console.WriteLine("User wrote: {0}", inp)))
             {
