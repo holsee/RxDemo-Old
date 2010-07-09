@@ -7,9 +7,15 @@ This will be ever expanding as my own knowledge on the topic expands.
 
 The aim is to keep it simple by have each mini demonstration self contained in a single method where possible.
 
-This project was created using Visual Studio 2010 C# 4 & .NET 4 & the Reactive Extensions for .NET which you will need to download and install from: 
-[here][2]
+This project was created using Visual Studio 2010 & C# 4 & .NET 4 & Reactive Extensions for .NET 4 (which you can download from: [here][2])
 
+Road Map
+-
+
+  - Full exploration of Concurrency Patterns
+  - Unit Tests for everything!
+ 
+...any other ideas just get in touch and I will do my best!
 
 Resources
 -
