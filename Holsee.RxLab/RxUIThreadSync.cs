@@ -5,7 +5,7 @@ using System.Windows.Forms;
 
 namespace Holsee.RxLab
 {
-    public static class RxThreadSync
+    public static class RxUIThreadSync
     {
         /// <summary>
         /// This demonstration shows how to avoid trying ot update the UI thread,
