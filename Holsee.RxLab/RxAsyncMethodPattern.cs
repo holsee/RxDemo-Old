@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Windows.Forms;
 using Holsee.RxLab.DictionarySuggestService;
 
 namespace Holsee.RxLab
@@ -8,20 +9,20 @@ namespace Holsee.RxLab
     {
         public static void NonReactiveDictionarySuggestSevice()
         {
-            var svc = new DictionarySuggestService.DictServiceSoapClient("DictServiceSoap");
+            var svc = new DictServiceSoapClient("DictServiceSoap");
 
             //Starts a webservice call
             svc.BeginMatchInDict("wn", "react", "prefix",
-                 //AsyncCallback delegate
-                 iar =>
-                     {
-                         var words = svc.EndMatchInDict(iar);
-                         foreach (var word in words)
-                         {
-                             Console.WriteLine(word.Word);
-                         }
-                     },
-                     null
+                                 //AsyncCallback delegate
+                                 iar =>
+                                     {
+                                         DictionaryWord[] words = svc.EndMatchInDict(iar);
+                                         foreach (DictionaryWord word in words)
+                                         {
+                                             Console.WriteLine(word.Word);
+                                         }
+                                     },
+                                 null
                 );
 
             //The above operation is quite "clumsy", 
@@ -41,30 +42,80 @@ namespace Holsee.RxLab
             //which takes a whole bunch of generic overloads for various Begin* method param counts.
             //The generic params passed to this bridge are the types of the Begin* method params, 
             //as well as the return type of End*.
-            
-            var matchInDict = Observable.FromAsyncPattern<string, string, string, DictionaryWord[]>(
-                svc.BeginMatchInDict,
-                svc.EndMatchInDict
+
+            Func<string, string, string, IObservable<DictionaryWord[]>> matchInDict = Observable.FromAsyncPattern
+                <string, string, string, DictionaryWord[]>(
+                    svc.BeginMatchInDict,
+                    svc.EndMatchInDict
                 );
 
             //The result of this bridging is a Func delegate thats takes the web service params and 
             //produces and observable sequence that will receive the result.
 
-            var result = matchInDict("wn", "react", "prefix");
-            var subscription = result.Subscribe(words =>
-                                                    {
-                                                        foreach (var word in words)
-                                                        {
-                                                            Console.WriteLine(word.Word);
-                                                        }
-                                                    });
+            IObservable<DictionaryWord[]> resultsFromDictSvc = matchInDict("wn", "react", "prefix");
+            IDisposable subscription = resultsFromDictSvc.Subscribe(
+                words =>
+                    {
+                        foreach (DictionaryWord word in words)
+                        {
+                            Console.WriteLine(word.Word);
+                        }
+                    });
 
-            
             Console.ReadLine(); //Wait to allow user to see output.
 
-            subscription.Dispose(); //Free the subscription resources
+            subscription.Dispose(); //Unsubscribe (could just use a using block)
         }
 
+        public static void SearchDictionaryAsyncFromUserThrottledAndDistinctInputThenUpdateUI()
+        {
+            //Set up UI with a TextBox Input and ListBox for results
+            var txt = new TextBox();
+            var list = new ListBox
+                           {
+                               Top = txt.Height + 10,
+                               Height = 250,
+                               Width = 250
+                           };
+            var frm = new Form
+                          {
+                              Controls = {txt, list}
+                          };
 
+            //Create an instance of our Async WebService Proxy
+            var svc = new DictServiceSoapClient("DictServiceSoap");
+
+            //Create an observable for input from the user
+            IObservable<string> input = Observable.FromEvent<EventArgs>(txt, "TextChanged")
+                .Select(evt => ((TextBox)evt.Sender).Text)
+                .DistinctUntilChanged()
+                .Throttle(TimeSpan.FromSeconds(1))
+                .Do(Console.WriteLine);
+
+            //Wrap the Begin End Async Method Pattern for Dictionary web service
+            Func<string, string, string, IObservable<DictionaryWord[]>> matchInDict =
+                Observable.FromAsyncPattern<string, string, string, DictionaryWord[]>(
+                    svc.BeginMatchInDict,
+                    svc.EndMatchInDict
+                    );
+            
+            //Create an observable for result of Async Dictionary web service call
+            IObservable<DictionaryWord[]> resultFromDictSvc = input.SelectMany(term => matchInDict("wn", term, "prefix"));
+
+            var subscription = resultFromDictSvc.ObserveOn(list).Subscribe(dictionaryWords =>
+                                                                              {
+                                                                                  list.Items.Clear();
+
+                                                                                  list.Items.AddRange((dictionaryWords.Select(
+                                                                                      dictionaryWord => dictionaryWord.Word)).ToArray());
+                                                                  });
+
+            FormClosedEventHandler handler = (sender, evt) => subscription.Dispose();
+
+            frm.FormClosed += handler;
+            
+            Application.Run(frm);
+
+        }
     }
 }

@@ -22,9 +22,13 @@ namespace Holsee.RxLab
                 //RxLinqToEvents.TextInputDistinctWithThrottleAndCustomTimestampOperator
 
                 //RxThreadSync.UIThreadUpdatingWindowsForms
+
+                //RxAsyncMethodPattern.NonReactiveDictionarySuggestSevice
+                //RxAsyncMethodPattern.ReactiveDictionarySuggestSevice
+       
+                RxAsyncMethodPattern.SearchDictionaryAsyncFromUserThrottledAndDistinctInputThenUpdateUI
                 
-                RxAsyncMethodPattern.ReactiveDictionarySuggestSevice
-            );
+                );
         }
     }
 }
