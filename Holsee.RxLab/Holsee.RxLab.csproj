@@ -43,9 +43,13 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ObservableExtensions.cs" />
+    <Compile Include="RxFactories.cs" />
+    <Compile Include="Helpers\ErrorHandling.cs" />
+    <Compile Include="RxObservableExtensions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RxLinqToEvents.cs" />
+    <Compile Include="RxThreadSync.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

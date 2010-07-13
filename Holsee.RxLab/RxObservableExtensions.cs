@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Holsee.RxLab
 {
-    public static class ObservableExtensions
+    public static class RxObservableExtensions
     {
         /// <summary>
         /// Converts <paramref name="source"/> to IObservable of Timestamped of <typeparamref name="T"/>, 
