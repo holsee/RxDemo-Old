@@ -72,22 +72,25 @@ namespace Holsee.RxLab
             //Set up UI with a TextBox Input and ListBox for results
             var txt = new TextBox();
             var list = new ListBox
-                           {
-                               Top = txt.Height + 10,
-                               Height = 250,
-                               Width = 250
-                           };
+            {
+                Top = txt.Height + 10,
+                Height = 250,
+                Width = 290
+            };
             var frm = new Form
-                          {
-                              Controls = {txt, list}
-                          };
+            {
+                Controls = { txt, list }
+            };
 
             //Create an instance of our Async WebService Proxy
             var svc = new DictServiceSoapClient("DictServiceSoap");
 
+            //Turn user input into a teamed sequence of strings
+            IObservable<string> textChanged = Observable.FromEvent<EventArgs>(txt, "TextChanged")
+                .Select(evt => ((TextBox)evt.Sender).Text);
+
             //Create an observable for input from the user
-            IObservable<string> input = Observable.FromEvent<EventArgs>(txt, "TextChanged")
-                .Select(evt => ((TextBox)evt.Sender).Text)
+            IObservable<string> input = textChanged
                 .DistinctUntilChanged()
                 .Throttle(TimeSpan.FromSeconds(1))
                 .Do(Console.WriteLine);
@@ -98,24 +101,157 @@ namespace Holsee.RxLab
                     svc.BeginMatchInDict,
                     svc.EndMatchInDict
                     );
-            
+
             //Create an observable for result of Async Dictionary web service call
-            IObservable<DictionaryWord[]> resultFromDictSvc = input.SelectMany(term => matchInDict("wn", term, "prefix"));
+            //The grand composition connecting the user input with the web service
+            IObservable<DictionaryWord[]> resultFromDictSvc = input.SelectMany(
+                term => matchInDict("wn", term, "prefix")
+                );
 
-            var subscription = resultFromDictSvc.ObserveOn(list).Subscribe(dictionaryWords =>
-                                                                              {
-                                                                                  list.Items.Clear();
+            //Synchronize with the UI thread and populate the ListBox or signal an Error
+            using (resultFromDictSvc.ObserveOn(list).Subscribe(
+                dictionaryWords =>
+                {
+                    list.Items.Clear();
 
-                                                                                  list.Items.AddRange((dictionaryWords.Select(
-                                                                                      dictionaryWord => dictionaryWord.Word)).ToArray());
-                                                                  });
+                    list.Items.AddRange((dictionaryWords
+                                            .Select(dictionaryWord => dictionaryWord.Word))
+                                            .ToArray());
+                },
+                ex => MessageBox.Show(String.Format("An error occurred: {0}", ex.Message), frm.Text)))
+            {
+                Application.Run(frm);
+            } //Proper disposal happens upon exiting the application
+        }
 
-            FormClosedEventHandler handler = (sender, evt) => subscription.Dispose();
+        public static void SearchDictionaryAsyncFromUserThrottledAndDistinctInputThenUpdateUIWithCancellationTakeUntil()
+        {
+            //Set up UI with a TextBox Input and ListBox for results
+            var txt = new TextBox();
+            var list = new ListBox
+                           {
+                               Top = txt.Height + 10,
+                               Height = 250,
+                               Width = 290
+                           };
+            var frm = new Form
+                          {
+                              Controls = {txt, list}
+                          };
 
-            frm.FormClosed += handler;
-            
-            Application.Run(frm);
+            //Create an instance of our Async WebService Proxy
+            var svc = new DictServiceSoapClient("DictServiceSoap");
 
+            //Turn user input into a teamed sequence of strings
+            IObservable<string> textChanged = Observable.FromEvent<EventArgs>(txt, "TextChanged")
+                .Select(evt => ((TextBox) evt.Sender).Text);
+
+            //Create an observable for input from the user
+            IObservable<string> input = textChanged
+                .DistinctUntilChanged()
+                .Throttle(TimeSpan.FromSeconds(1))
+                .Do(Console.WriteLine);
+
+            //Wrap the Begin End Async Method Pattern for Dictionary web service
+            Func<string, string, string, IObservable<DictionaryWord[]>> matchInDict =
+                Observable.FromAsyncPattern<string, string, string, DictionaryWord[]>(
+                    svc.BeginMatchInDict,
+                    svc.EndMatchInDict
+                    );
+
+            //Create an observable for result of Async Dictionary web service call
+            //The grand composition connecting the user input with the web service
+            IObservable<DictionaryWord[]> resultFromDictSvc = input.SelectMany(
+                term => matchInDict("wn", term, "prefix")
+                            .Finally(() => Console.WriteLine("Disposed request for {0}", term)) // * Highlights Disposal
+                            .TakeUntil(input) // * We Take Only Until a new Input terms comes in
+                );
+
+            //Synchronize with the UI thread and populate the ListBox or signal an Error
+            using (resultFromDictSvc.ObserveOn(list).Subscribe(
+                dictionaryWords =>
+                    {
+                        list.Items.Clear();
+
+                        list.Items.AddRange((dictionaryWords
+                                                .Select(dictionaryWord => dictionaryWord.Word))
+                                                .ToArray());
+                    },
+                ex => MessageBox.Show(String.Format("An error occurred: {0}", ex.Message), frm.Text)))
+            {
+                Application.Run(frm);
+            } //Proper disposal happens upon exiting the application
+        }
+
+        public static void SearchDictionaryAsyncFromUserThrottledAndDistinctInputThenUpdateUIWithCancellationSwitch()
+        {
+            //Set up UI with a TextBox Input and ListBox for results
+            var txt = new TextBox();
+            var list = new ListBox
+            {
+                Top = txt.Height + 10,
+                Height = 250,
+                Width = 290
+            };
+            var frm = new Form
+            {
+                Controls = { txt, list }
+            };
+
+            //Create an instance of our Async WebService Proxy
+            var svc = new DictServiceSoapClient("DictServiceSoap");
+
+            //Turn user input into a teamed sequence of strings
+            IObservable<string> textChanged = Observable.FromEvent<EventArgs>(txt, "TextChanged")
+                .Select(evt => ((TextBox)evt.Sender).Text);
+
+            //Create an observable for input from the user
+            IObservable<string> input = textChanged
+                .DistinctUntilChanged()
+                .Throttle(TimeSpan.FromSeconds(1))
+                .Do(Console.WriteLine);
+
+            //Wrap the Begin End Async Method Pattern for Dictionary web service
+            Func<string, string, string, IObservable<DictionaryWord[]>> matchInDict =
+                Observable.FromAsyncPattern<string, string, string, DictionaryWord[]>(
+                    svc.BeginMatchInDict,
+                    svc.EndMatchInDict
+                    );
+
+            //This is an alternative composition which does nto leverage SelectMany for the projection
+            //We use Switch() which cancel's out one's existing subscriptions and hops to a new one upon new input.
+            // ---o-----o--------------o
+            //    |     |              |
+            //    V     |              |                         |
+            //====---o--X---..         |                         S
+            //    =  |  |              |                         W                         
+            //    =  V  V              |                         I
+            //    ===O  ----o------o---X--..                     T
+            //       =      |      |   |                         C
+            //       =      V      V   V                         T
+            //       =======O======O   ---o----o----o--..        |         
+            //                     =      |    |    |            V
+            //                     =      V    V    V
+            //                     =======O====O====O=== IObservable<T>
+
+            IObservable<DictionaryWord[]> resultFromDictSvc = (from term in input
+                                                               select matchInDict("wn", term, "prefix"))
+                                                               .Switch();
+
+            //Synchronize with the UI thread and populate the ListBox or signal an Error
+            using (resultFromDictSvc.ObserveOn(list).Subscribe(
+                dictionaryWords =>
+                {
+                    list.Items.Clear();
+
+                    list.Items.AddRange((dictionaryWords
+                                            .Select(dictionaryWord => dictionaryWord.Word))
+                                            .ToArray());
+                },
+                ex => MessageBox.Show(String.Format("An error occurred: {0}", ex.Message), frm.Text)))
+            {
+                Application.Run(frm);
+            } //Proper disposal happens upon exiting the application
         }
     }
 }
