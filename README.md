@@ -9,14 +9,6 @@ The aim is to keep it simple by have each mini demonstration self contained in a
 
 This project was created using Visual Studio 2010 & C# 4 & .NET 4 & Reactive Extensions for .NET 4 (which you can download from: [here][2])
 
-Road Map
--
-
-  - Full exploration of Concurrency Patterns
-  - Unit Tests for everything!
- 
-...any other ideas just get in touch and I will do my best!
-
 Resources
 -
 
