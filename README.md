@@ -18,6 +18,7 @@ Official Reactive Extensions for .NET Hands on Labs: [here][1]
 LICENSE
 -
 
+```
         DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE 
                     Version 2, December 2004 
 
@@ -31,7 +32,7 @@ LICENSE
    TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION 
 
   0. You just DO WHAT THE FUCK YOU WANT TO.
-
+```
 
 
   [1]: http://blogs.msdn.com/b/rxteam/archive/2010/07/07/rx-hands-on-labs-published.aspx
